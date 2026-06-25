@@ -220,19 +220,59 @@ document.body.appendChild(p);
 
 <script>
 
+//////////////////////////////////////////////////////
+// 🧠 AI BEHAVIOR CONFIG (EDIT THIS SECTION ONLY)
+//////////////////////////////////////////////////////
+
+const AI_CONFIG = {
+
+name: "Berry AI",
+
+tone: "friendly and casual", 
+// friendly | serious | funny | strict | chill
+
+personality: `
+You are Berry AI, a helpful AI assistant created by Yuyang, a boy. He is a middle schooler.
+You speak like a normal person, not robotic or sci-fi.
+Keep answers clear, simple, and natural. Don't overspeak.
+`,
+
+rules: `
+- Do not act like a system or robot
+- Avoid overly technical language unless asked
+- Be helpful and conversational
+- Keep responses not too long
+`,
+
+responseLength: "medium"
+// short | medium | long
+};
+
+//////////////////////////////////////////////////////
+
 const API_KEY = "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";
 const MODEL = "openai/gpt-oss-20b";
 
 let messages=[
 {
 role:"system",
-content:"You are Berry AI, a helpful assistant created by Yuyang. Be natural and simple."
+content:`
+Name: ${AI_CONFIG.name}
+Tone: ${AI_CONFIG.tone}
+
+Personality:
+${AI_CONFIG.personality}
+
+Rules:
+${AI_CONFIG.rules}
+
+Response length: ${AI_CONFIG.responseLength}
+`
 }
 ];
 
 let isGenerating=false;
 let stop=false;
-
 let typingInterval=null;
 
 const chat=document.getElementById("chat");
@@ -240,7 +280,7 @@ const input=document.getElementById("input");
 const sendBtn=document.getElementById("sendBtn");
 
 /* BOOT */
-const bootLines=["starting up...","getting things ready...","loading AI...","ready."];
+const bootLines=["starting up...","getting things ready...","loading AI...","100%."];
 let i=0;
 function boot(){
 document.getElementById("bootText").textContent=bootLines[i];
@@ -270,7 +310,7 @@ chat.scrollTop=999999;
 return d;
 }
 
-/* 🚫 STOP BUTTON */
+/* STOP */
 function stopGeneration(){
 stop=true;
 
@@ -284,7 +324,7 @@ sendBtn.disabled=false;
 input.disabled=false;
 }
 
-/* ⌨️ TYPE TEXT (STOP-CONTROLLED) */
+/* TYPE */
 function typeText(el,text,speed=12){
 
 return new Promise(res=>{

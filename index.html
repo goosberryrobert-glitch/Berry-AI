@@ -60,7 +60,6 @@ display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-gap:8px;
 text-align:center;
 }
 
@@ -205,6 +204,10 @@ document.body.appendChild(p);
 <!-- CHAT -->
 <div id="chatApp">
 
+<header>
+<div>🍓 BERRY AI</div>
+<button class="smallBtn" onclick="stopGeneration()">Stop</button>
+</header>
 
 <div class="chat" id="chat"></div>
 
@@ -227,10 +230,10 @@ content:"You are Berry AI, a helpful assistant created by Yuyang. Be natural and
 }
 ];
 
-let isTyping=false;
+let isGenerating=false;
+let stop=false;
+
 let typingInterval=null;
-let currentTypingEl=null;
-let paused=false;
 
 const chat=document.getElementById("chat");
 const input=document.getElementById("input");
@@ -267,43 +270,52 @@ chat.scrollTop=999999;
 return d;
 }
 
-/* ⛔ BLOCK WHILE AI IS THINKING */
-function setBusy(state){
-isTyping=state;
-sendBtn.disabled=state;
-input.disabled=state;
+/* 🚫 STOP BUTTON */
+function stopGeneration(){
+stop=true;
+
+if(typingInterval){
+clearInterval(typingInterval);
+typingInterval=null;
 }
 
-/* ⌨️ TYPE WITH PAUSE SUPPORT */
+isGenerating=false;
+sendBtn.disabled=false;
+input.disabled=false;
+}
+
+/* ⌨️ TYPE TEXT (STOP-CONTROLLED) */
 function typeText(el,text,speed=12){
 
 return new Promise(res=>{
-currentTypingEl=el;
 el.textContent="";
 let i=0;
+stop=false;
 
 typingInterval=setInterval(()=>{
-if(paused) return;
+if(stop){
+clearInterval(typingInterval);
+typingInterval=null;
+res();
+return;
+}
 
 el.textContent+=text[i];
 i++;
 
 if(i>=text.length){
 clearInterval(typingInterval);
+typingInterval=null;
 res();
 }
 },speed);
 });
 }
 
-/* ⏸️ PAUSE BUTTON */
-function pauseTyping(){
-paused=!paused;
-}
-
+/* SEND */
 async function send(){
 
-if(isTyping) return; // 🚫 block spam while AI responds
+if(isGenerating) return;
 
 const text=input.value.trim();
 if(!text) return;
@@ -312,7 +324,9 @@ add(text,"user");
 messages.push({role:"user",content:text});
 input.value="";
 
-setBusy(true);
+isGenerating=true;
+sendBtn.disabled=true;
+input.disabled=true;
 
 const load=add("thinking...","bot");
 
@@ -345,8 +359,9 @@ load.textContent="connection error.";
 console.log(e);
 }
 
-setBusy(false);
-paused=false;
+isGenerating=false;
+sendBtn.disabled=false;
+input.disabled=false;
 }
 
 document.addEventListener("keydown",(e)=>{

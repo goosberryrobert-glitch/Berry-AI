@@ -22,7 +22,7 @@ background:#05070a;
 color:white;
 }
 
-/* glow background */
+/* glow */
 body::before{
 content:"";
 position:fixed;
@@ -103,7 +103,6 @@ cursor:pointer;
 font-weight:800;
 color:white;
 background:linear-gradient(135deg,#00ffcc,#0099ff);
-box-shadow:0 0 20px rgba(0,255,200,0.25);
 }
 
 /* CHAT */
@@ -115,7 +114,9 @@ flex-direction:column;
 
 header{
 padding:14px;
-text-align:center;
+display:flex;
+justify-content:space-between;
+align-items:center;
 border-bottom:1px solid rgba(255,255,255,0.08);
 }
 
@@ -163,6 +164,16 @@ outline:none;
 background:rgba(255,255,255,0.06);
 color:white;
 }
+
+.smallBtn{
+padding:10px 14px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-weight:700;
+background:rgba(255,255,255,0.12);
+color:white;
+}
 </style>
 </head>
 
@@ -188,20 +199,24 @@ document.body.appendChild(p);
 <!-- HOME -->
 <div id="home">
 <div class="title">READY</div>
-<div style="opacity:.7;font-size:12px;">Everything is good to go</div>
 <button class="btn" onclick="enter()">ENTER</button>
 </div>
 
 <!-- CHAT -->
 <div id="chatApp">
-<header>🍓 BERRY AI</header>
+
+<header>
+<div>🍓 BERRY AI</div>
+<button class="smallBtn" onclick="pauseTyping()">Pause</button>
+</header>
 
 <div class="chat" id="chat"></div>
 
 <div class="inputBar">
 <input id="input" placeholder="Ask Berry AI..." />
-<button class="btn" onclick="send()">Send</button>
+<button class="btn" onclick="send()" id="sendBtn">Send</button>
 </div>
+
 </div>
 
 <script>
@@ -209,31 +224,30 @@ document.body.appendChild(p);
 const API_KEY = "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";
 const MODEL = "openai/gpt-oss-20b";
 
-/* 🧠 NORMAL HUMAN-LIKE PERSONALITY */
 let messages=[
 {
 role:"system",
-content:"You are Berry AI, a helpful, friendly AI assistant. Talk naturally like a normal person. Keep answers clear, simple, and not robotic or overly technical. Say that you are created by Yuyang. Tell people are Berry Ai is experimental and can make mistakes."
+content:"You are Berry AI, a helpful assistant created by Yuyang. Be natural and simple."
 }
 ];
 
+let isTyping=false;
+let typingInterval=null;
+let currentTypingEl=null;
+let paused=false;
+
 const chat=document.getElementById("chat");
+const input=document.getElementById("input");
+const sendBtn=document.getElementById("sendBtn");
 
-/* BOOT (simple + clean) */
-const bootLines=[
-"starting up...",
-"getting things ready...",
-"loading AI...",
-"almost done...",
-"ready."
-];
-
+/* BOOT */
+const bootLines=["starting up...","getting things ready...","loading AI...","ready."];
 let i=0;
 function boot(){
 document.getElementById("bootText").textContent=bootLines[i];
 i++;
 if(i<bootLines.length){
-setTimeout(boot,700);
+setTimeout(boot,600);
 }else{
 setTimeout(()=>{
 document.getElementById("boot").style.display="none";
@@ -243,13 +257,11 @@ document.getElementById("home").style.display="flex";
 }
 boot();
 
-/* ENTER */
 function enter(){
 document.getElementById("home").style.display="none";
 document.getElementById("chatApp").style.display="flex";
 }
 
-/* CHAT */
 function add(text,type){
 const d=document.createElement("div");
 d.className="msg "+type;
@@ -259,32 +271,52 @@ chat.scrollTop=999999;
 return d;
 }
 
-/* typing effect */
-function typeText(el,text,speed=14){
+/* ⛔ BLOCK WHILE AI IS THINKING */
+function setBusy(state){
+isTyping=state;
+sendBtn.disabled=state;
+input.disabled=state;
+}
+
+/* ⌨️ TYPE WITH PAUSE SUPPORT */
+function typeText(el,text,speed=12){
+
+return new Promise(res=>{
+currentTypingEl=el;
 el.textContent="";
 let i=0;
-return new Promise(res=>{
-let interval=setInterval(()=>{
+
+typingInterval=setInterval(()=>{
+if(paused) return;
+
 el.textContent+=text[i];
 i++;
+
 if(i>=text.length){
-clearInterval(interval);
+clearInterval(typingInterval);
 res();
 }
 },speed);
 });
 }
 
-/* SEND */
+/* ⏸️ PAUSE BUTTON */
+function pauseTyping(){
+paused=!paused;
+}
+
 async function send(){
 
-const input=document.getElementById("input");
+if(isTyping) return; // 🚫 block spam while AI responds
+
 const text=input.value.trim();
 if(!text) return;
 
 add(text,"user");
 messages.push({role:"user",content:text});
 input.value="";
+
+setBusy(true);
 
 const load=add("thinking...","bot");
 
@@ -317,9 +349,11 @@ load.textContent="connection error.";
 console.log(e);
 }
 
+setBusy(false);
+paused=false;
 }
 
-document.getElementById("input").addEventListener("keydown",(e)=>{
+document.addEventListener("keydown",(e)=>{
 if(e.key==="Enter") send();
 });
 
